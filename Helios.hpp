@@ -26,6 +26,16 @@ public:
 	std::vector<Meatball> meatballs;
 	std::shared_ptr<fe::Object> meatballObject;
 
+	// Marching-cubes grid: cubes per side, half-extent of the box, iso level.
+	// The surface sits where field() == knLevel (0.5 → blob radius ≈ 1.4·radius).
+	static constexpr int   knRes    = 48;
+	static constexpr float knExtent = 90.0f;
+	static constexpr float knLevel  = 0.5f;
+
+	// Balls bounce inside this box (kept well clear of the grid walls so a
+	// swimming blob never leaves the volume).
+	static constexpr float kBounceBox = 45.0f;
+
 	// The width/height constructor defaults to the OpenGL render device, so we
 	// can boot a blank window with embedded shaders and zero resource files.
 	Helios(int width = 1280, int height = 720, bool vr = false) : fe::EditableGame(width, height, vr, true) {
@@ -115,6 +125,22 @@ public:
 		if (ImGui::GetIO().WantCaptureMouse) window->StopMouseCapture();
 	}
 
+	void AnimateMeatballs(float dt) {
+		if (dt <= 0.0f) dt = 1.0f / 60.0f;
+
+		for (auto& ball : meatballs) {
+			ball.center += ball.velocity * dt;
+			for (int axis = 0; axis < 3; ++axis) {
+				if (ball.center[axis] >  kBounceBox) { ball.center[axis] =  kBounceBox; ball.velocity[axis] = -glm::abs(ball.velocity[axis]); }
+				if (ball.center[axis] < -kBounceBox) { ball.center[axis] = -kBounceBox; ball.velocity[axis] =  glm::abs(ball.velocity[axis]); }
+			}
+		}
+
+		// Remesh the whole fused blob surface around the current positions.
+		meatballObject->meshes.clear();
+		meatballObject->PushMesh(Meatball::MakeMesh(meatballs, knRes, knExtent, knLevel));
+	}
+
 	void Run() {
 		auto window = GetWindow<fe::SDLWindow>();
 		window->Show();
@@ -123,6 +149,7 @@ public:
 		while (!window->ShouldClose()) {
 			ProcessInput();
 			Update();
+			AnimateMeatballs(static_cast<float>(scene->GetDeltaTime()));
 			Redraw();
 		}
 
