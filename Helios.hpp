@@ -148,7 +148,6 @@ public:
 
 		while (!window->ShouldClose()) {
 			ProcessInput();
-			Update(false);
 			AnimateMeatballs(static_cast<float>(scene->GetDeltaTime()));
 			Redraw();
 		}
