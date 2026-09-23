@@ -40,7 +40,7 @@ public:
 	// can boot a blank window with embedded shaders and zero resource files.
 	Helios(int width = 1280, int height = 720, bool vr = false) : fe::EditableGame(width, height, vr, true) {
 
-		SetClearColor(0.05f, 0.05f, 0.08f);
+		SetClearColor(1.05f, 0.05f, 0.08f);
 
 		LoadShaderTexts(kVertexShader, kFragmentShader);
 
@@ -148,7 +148,7 @@ public:
 
 		while (!window->ShouldClose()) {
 			ProcessInput();
-			Update();
+			Update(false);
 			AnimateMeatballs(static_cast<float>(scene->GetDeltaTime()));
 			Redraw();
 		}
