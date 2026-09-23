@@ -44,17 +44,41 @@ public:
 		lights[0].intensity = 1.0f;
 		lights[0].radius = 400.0f;
 
-		// A single lonely meatball, submerged in a 48^3 marching-cubes grid
-		// spanning [-60, +60]. Surface sits where field() == 0.5.
-		Meatball ball;
-		ball.center = glm::vec3(0.0f);
-		ball.radius = 30.0f;
-		meatballs.push_back(ball);
+		// A handful of meatballs swimming inside a marching-cubes grid.
+		// Each blob's surface sits at field() == level; the fused iso-surface
+		// of all of them is remeshed every frame as they fly around.
+		{
+			Meatball ball;
+			ball.center = glm::vec3(-14.0f, 6.0f, 0.0f);
+			ball.radius = 30.0f;
+			ball.velocity = glm::vec3(22.0f, 8.0f, -14.0f);
+			meatballs.push_back(ball);
+
+			ball.center = glm::vec3(18.0f, -4.0f, 6.0f);
+			ball.radius = 24.0f;
+			ball.velocity = glm::vec3(-18.0f, 12.0f, 20.0f);
+			meatballs.push_back(ball);
+
+			ball.center = glm::vec3(6.0f, 14.0f, -10.0f);
+			ball.radius = 20.0f;
+			ball.velocity = glm::vec3(10.0f, -16.0f, 24.0f);
+			meatballs.push_back(ball);
+
+			ball.center = glm::vec3(-4.0f, -12.0f, 16.0f);
+			ball.radius = 26.0f;
+			ball.velocity = glm::vec3(-24.0f, 6.0f, -10.0f);
+			meatballs.push_back(ball);
+
+			ball.center = glm::vec3(0.0f, 0.0f, -18.0f);
+			ball.radius = 18.0f;
+			ball.velocity = glm::vec3(14.0f, -6.0f, 12.0f);
+			meatballs.push_back(ball);
+		}
 
 		meatballObject = std::make_shared<fe::Object>();
 		meatballObject->name = "Meatball";
 		meatballObject->color = glm::vec3(0.25f, 0.65f, 1.0f);
-		meatballObject->PushMesh(Meatball::MakeMesh(meatballs, 48, 60.0f, 0.5f));
+		meatballObject->PushMesh(Meatball::MakeMesh(meatballs, knRes, knExtent, knLevel));
 		this->scene->AddObject(meatballObject);
 
 		// Park the camera so the blob is in frame.

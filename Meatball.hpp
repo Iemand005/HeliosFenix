@@ -25,6 +25,7 @@ class Meatball {
 public:
 	glm::vec3 center{0.0f, 0.0f, 0.0f};
 	float radius = 30.0f;
+	glm::vec3 velocity{0.0f};
 
 	float Field(const glm::vec3& p) const {
 		glm::vec3 d = p - center;
