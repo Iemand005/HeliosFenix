@@ -14,11 +14,17 @@
 #include <imgui/backends/imgui_impl_opengl3.h>
 
 #include <EditableGame.hpp>
+#include <Object.hpp>
+
+#include "Meatball.hpp"
 
 class Helios : public fe::EditableGame {
 public:
 
 	bool showDebugUI = false;
+
+	std::vector<Meatball> meatballs;
+	std::shared_ptr<fe::Object> meatballObject;
 
 	// The width/height constructor defaults to the OpenGL render device, so we
 	// can boot a blank window with embedded shaders and zero resource files.
@@ -27,6 +33,31 @@ public:
 		SetClearColor(0.05f, 0.05f, 0.08f);
 
 		LoadShaderTexts(kVertexShader, kFragmentShader);
+
+		// This shader is lit entirely by point lights; park one big soft lamp
+		// high above the scene so the blob is nicely shaded.
+		auto* lights = scene->GetLights();
+		lights[0].position = glm::vec3(0.0f, 120.0f, 220.0f);
+		lights[0].color = glm::vec3(1.0f);
+		lights[0].intensity = 1.0f;
+		lights[0].radius = 400.0f;
+
+		// A single lonely meatball, submerged in a 48^3 marching-cubes grid
+		// spanning [-60, +60]. Surface sits where field() == 0.5.
+		Meatball ball;
+		ball.center = glm::vec3(0.0f);
+		ball.radius = 30.0f;
+		meatballs.push_back(ball);
+
+		meatballObject = std::make_shared<fe::Object>();
+		meatballObject->name = "Meatball";
+		meatballObject->color = glm::vec3(0.25f, 0.65f, 1.0f);
+		meatballObject->PushMesh(Meatball::MakeMesh(meatballs, 48, 60.0f, 0.5f));
+		this->scene->AddObject(meatballObject);
+
+		// Park the camera so the blob is in frame.
+		camera->SetPos(glm::vec3(0.0f, 70.0f, 180.0f));
+		camera->LookAt(glm::vec3(0.0f));
 	}
 
 	void ProcessInput() {
