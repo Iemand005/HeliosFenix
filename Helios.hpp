@@ -34,6 +34,8 @@ public:
 
 		LoadShaderTexts(kVertexShader, kFragmentShader);
 
+		renderDevice->EnableDepthTest();
+
 		// This shader is lit entirely by point lights; park one big soft lamp
 		// high above the scene so the blob is nicely shaded.
 		auto* lights = scene->GetLights();
