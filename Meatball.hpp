@@ -398,7 +398,7 @@ public:
 		for (int z = 0; z < res; ++z) {
 			for (int y = 0; y < res; ++y) {
 				for (int x = 0; x < res; ++x) {
-					int baseIdx = cornerIndex(x, y, z);
+					int baseIdx = cornerIndex(x, y, z); 
 
 					int cubeBits = 0;
 					for (int c = 0; c < 8; ++c) {
