@@ -388,6 +388,7 @@ public:
 			}
 		}
 		auto ph1 = std::chrono::high_resolution_clock::now();
+		auto ph2 = ph1;
 
 		glm::vec3 cornerPosArr[8];
 		float cornerVal[8];
@@ -428,7 +429,7 @@ public:
 						edgeNorms[e] = len > 1e-5f ? (-g / len) : glm::vec3(0.0f, 1.0f, 0.0f);
 					}
 
-					auto ph2 = std::chrono::high_resolution_clock::now();
+					ph2 = std::chrono::high_resolution_clock::now();
 
 					for (int tri = 0; tri < 5; ++tri) {
 						int e0 = kTriTable[cubeBits][3 * tri + 0];
