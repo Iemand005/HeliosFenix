@@ -49,16 +49,9 @@ public:
 		return f;
 	}
 
-	static glm::vec3 GradientAt(const std::vector<Meatball>& balls, const glm::vec3& p, float invLevel) {
+	static glm::vec3 GradientAt(const std::vector<Meatball>& balls, const glm::vec3& p) {
 		glm::vec3 g{0.0f};
-		const float kPad2 = 1.25f * 1.25f;
-		for (const auto& b : balls) {
-			float d2 = glm::dot(p - b.center, p - b.center);
-			if (d2 >= b.radius * b.radius * invLevel * kPad2) continue; // far tail: ignore
-			if (d2 < 1e-4f) d2 = 1e-4f;
-			float scale = -2.0f * (b.radius * b.radius) / (d2 * d2);
-			g += scale * (p - b.center);
-		}
+		for (const auto& b : balls) g += b.Gradient(p);
 		return g;
 	}
 
@@ -373,7 +366,6 @@ public:
 		const int n = res + 1;                          // corner count per side
 		const int n2 = n * n;
 		const float step = (2.0f * extent) / res;
-		const float invLevel = 1.0f / level;
 
 		auto cornerIndex = [n, n2](int x, int y, int z) { return z * n2 + y * n + x; };
 		auto cornerPos = [n, n2, step, extent](int idx, glm::vec3& out) {
@@ -383,86 +375,29 @@ public:
 			out = glm::vec3(-extent + x * step, -extent + y * step, -extent + z * step);
 		};
 
-		// Only corners inside any ball's area of influence can lie on the
-		// surface (field >= level requires distance <= radius/sqrt(level)),
-		// so find the padded AABB of all influence spheres and restrict all
-		// work to that box. Geometry of the isosurface is unchanged.
-		int xMin = n, xMax = -1, yMin = n, yMax = -1, zMin = n, zMax = -1;
-		for (const auto& b : balls) {
-			const float ir = b.radius * std::sqrt(invLevel) * 1.25f;
-			const glm::vec3 lo = b.center - glm::vec3(ir);
-			const glm::vec3 hi = b.center + glm::vec3(ir);
-			int cx0 = static_cast<int>(std::floor((lo.x + extent) / step));
-			int cx1 = static_cast<int>(std::ceil((hi.x + extent) / step));
-			int cy0 = static_cast<int>(std::floor((lo.y + extent) / step));
-			int cy1 = static_cast<int>(std::ceil((hi.y + extent) / step));
-			int cz0 = static_cast<int>(std::floor((lo.z + extent) / step));
-			int cz1 = static_cast<int>(std::ceil((hi.z + extent) / step));
-			if (cx1 < 0 || cy1 < 0 || cz1 < 0 || cx0 > n - 1 || cy0 > n - 1 || cz0 > n - 1) continue;
-			cx0 = std::max(0, cx0); cx1 = std::min(n - 1, cx1);
-			cy0 = std::max(0, cy0); cy1 = std::min(n - 1, cy1);
-			cz0 = std::max(0, cz0); cz1 = std::min(n - 1, cz1);
-			xMin = std::min(xMin, cx0); xMax = std::max(xMax, cx1);
-			yMin = std::min(yMin, cy0); yMax = std::max(yMax, cy1);
-			zMin = std::min(zMin, cz0); zMax = std::max(zMax, cz1);
-		}
-		if (xMax < 0) return mesh; // no ball anywhere near the grid
-		std::cerr << "  region=[" << xMin << ".." << xMax << "," << yMin << ".." << yMax << "," << zMin << ".." << zMax << "]"
-			<< " balls=" << balls.size() << std::endl;
-
-		// Only corners inside any ball's area of influence can lie on the
-		// surface (field >= level requires distance <= radius/sqrt(level)),
-		// so find the padded AABB of all influence spheres and restrict all
-		// work to that box. Geometry of the isosurface is unchanged.
-		int xMin = n, xMax = -1, yMin = n, yMax = -1, zMin = n, zMax = -1;
-		for (const auto& b : balls) {
-			const float ir = b.radius * std::sqrt(invLevel) * 1.25f;
-			const glm::vec3 lo = b.center - glm::vec3(ir);
-			const glm::vec3 hi = b.center + glm::vec3(ir);
-			int cx0 = static_cast<int>(std::floor((lo.x + extent) / step));
-			int cx1 = static_cast<int>(std::ceil((hi.x + extent) / step));
-			int cy0 = static_cast<int>(std::floor((lo.y + extent) / step));
-			int cy1 = static_cast<int>(std::ceil((hi.y + extent) / step));
-			int cz0 = static_cast<int>(std::floor((lo.z + extent) / step));
-			int cz1 = static_cast<int>(std::ceil((hi.z + extent) / step));
-			if (cx1 < 0 || cy1 < 0 || cz1 < 0 || cx0 > n - 1 || cy0 > n - 1 || cz0 > n - 1) continue;
-			cx0 = std::max(0, cx0); cx1 = std::min(n - 1, cx1);
-			cy0 = std::max(0, cy0); cy1 = std::min(n - 1, cy1);
-			cz0 = std::max(0, cz0); cz1 = std::min(n - 1, cz1);
-			xMin = std::min(xMin, cx0); xMax = std::max(xMax, cx1);
-			yMin = std::min(yMin, cy0); yMax = std::max(yMax, cy1);
-			zMin = std::min(zMin, cz0); zMax = std::max(zMax, cz1);
-		}
-		if (xMax < 0) return mesh; // no ball anywhere near the grid
-		std::cerr << "  region=[" << xMin << ".." << xMax << "," << yMin << ".." << yMax << "," << zMin << ".." << zMax << "]"
-			<< " balls=" << balls.size() << std::endl;
-
 		mesh.vertices.reserve(48000);
 		mesh.indices.reserve(48000);
 
-		auto ph0 = std::chrono::high_resolution_clock::now();
-		// Cache the field value at every grid corner inside the region.
+		// Cache the field value at every grid corner.
 		std::vector<float> field(n2 * n);
-		for (int z = zMin; z <= zMax; ++z) {
-			for (int y = yMin; y <= yMax; ++y) {
-				for (int x = xMin; x <= xMax; ++x) {
+		for (int z = 0; z < n; ++z) {
+			for (int y = 0; y < n; ++y) {
+				for (int x = 0; x < n; ++x) {
 					glm::vec3 p;
 					cornerPos(cornerIndex(x, y, z), p);
 					field[cornerIndex(x, y, z)] = FieldAt(balls, p);
 				}
 			}
 		}
-		auto ph1 = std::chrono::high_resolution_clock::now();
-		auto ph2 = ph1;
 
 		glm::vec3 cornerPosArr[8] = {};
 		float cornerVal[8];
 		glm::vec3 edgeVerts[12];
 		glm::vec3 edgeNorms[12];
 
-		for (int z = zMin; z < zMax; ++z) {
-			for (int y = yMin; y < yMax; ++y) {
-				for (int x = xMin; x < xMax; ++x) {
+		for (int z = 0; z < res; ++z) {
+			for (int y = 0; y < res; ++y) {
+				for (int x = 0; x < res; ++x) {
 					int baseIdx = cornerIndex(x, y, z);
 
 					int cubeBits = 0;
@@ -499,12 +434,10 @@ public:
 						t = std::clamp(t, 0.0f, 1.0f);
 
 						edgeVerts[e] = cornerPosArr[c0] + t * (cornerPosArr[c1] - cornerPosArr[c0]);
-						glm::vec3 g = GradientAt(balls, edgeVerts[e], invLevel);
+						glm::vec3 g = GradientAt(balls, edgeVerts[e]);
 						float len = glm::length(-g);
 						edgeNorms[e] = len > 1e-5f ? (-g / len) : glm::vec3(0.0f, 1.0f, 0.0f);
 					}
-
-					ph2 = std::chrono::high_resolution_clock::now();
 
 					for (int tri = 0; tri < 5; ++tri) {
 						int e0 = kTriTable[cubeBits][3 * tri + 0];
@@ -527,11 +460,6 @@ public:
 			}
 		}
 
-		auto ph3 = std::chrono::high_resolution_clock::now();
-		std::cerr << "  mesh: cache=" << std::chrono::duration<double, std::milli>(ph1 - ph0).count()
-			<< "ms cubes=" << std::chrono::duration<double, std::milli>(ph2 - ph1).count()
-			<< "ms tris=" << std::chrono::duration<double, std::milli>(ph3 - ph2).count()
-			<< "ms verts=" << mesh.vertices.size() << " tris=" << mesh.indices.size() / 3 << std::endl;
 		return mesh;
 	}
 };
