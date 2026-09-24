@@ -407,6 +407,35 @@ public:
 			zMin = std::min(zMin, cz0); zMax = std::max(zMax, cz1);
 		}
 		if (xMax < 0) return mesh; // no ball anywhere near the grid
+		std::cerr << "  region=[" << xMin << ".." << xMax << "," << yMin << ".." << yMax << "," << zMin << ".." << zMax << "]"
+			<< " balls=" << balls.size() << std::endl;
+
+		// Only corners inside any ball's area of influence can lie on the
+		// surface (field >= level requires distance <= radius/sqrt(level)),
+		// so find the padded AABB of all influence spheres and restrict all
+		// work to that box. Geometry of the isosurface is unchanged.
+		int xMin = n, xMax = -1, yMin = n, yMax = -1, zMin = n, zMax = -1;
+		for (const auto& b : balls) {
+			const float ir = b.radius * std::sqrt(invLevel) * 1.25f;
+			const glm::vec3 lo = b.center - glm::vec3(ir);
+			const glm::vec3 hi = b.center + glm::vec3(ir);
+			int cx0 = static_cast<int>(std::floor((lo.x + extent) / step));
+			int cx1 = static_cast<int>(std::ceil((hi.x + extent) / step));
+			int cy0 = static_cast<int>(std::floor((lo.y + extent) / step));
+			int cy1 = static_cast<int>(std::ceil((hi.y + extent) / step));
+			int cz0 = static_cast<int>(std::floor((lo.z + extent) / step));
+			int cz1 = static_cast<int>(std::ceil((hi.z + extent) / step));
+			if (cx1 < 0 || cy1 < 0 || cz1 < 0 || cx0 > n - 1 || cy0 > n - 1 || cz0 > n - 1) continue;
+			cx0 = std::max(0, cx0); cx1 = std::min(n - 1, cx1);
+			cy0 = std::max(0, cy0); cy1 = std::min(n - 1, cy1);
+			cz0 = std::max(0, cz0); cz1 = std::min(n - 1, cz1);
+			xMin = std::min(xMin, cx0); xMax = std::max(xMax, cx1);
+			yMin = std::min(yMin, cy0); yMax = std::max(yMax, cy1);
+			zMin = std::min(zMin, cz0); zMax = std::max(zMax, cz1);
+		}
+		if (xMax < 0) return mesh; // no ball anywhere near the grid
+		std::cerr << "  region=[" << xMin << ".." << xMax << "," << yMin << ".." << yMax << "," << zMin << ".." << zMax << "]"
+			<< " balls=" << balls.size() << std::endl;
 
 		mesh.vertices.reserve(48000);
 		mesh.indices.reserve(48000);
