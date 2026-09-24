@@ -49,9 +49,16 @@ public:
 		return f;
 	}
 
-	static glm::vec3 GradientAt(const std::vector<Meatball>& balls, const glm::vec3& p) {
+	static glm::vec3 GradientAt(const std::vector<Meatball>& balls, const glm::vec3& p, float invLevel) {
 		glm::vec3 g{0.0f};
-		for (const auto& b : balls) g += b.Gradient(p);
+		const float kPad2 = 1.25f * 1.25f;
+		for (const auto& b : balls) {
+			float d2 = glm::dot(p - b.center, p - b.center);
+			if (d2 >= b.radius * b.radius * invLevel * kPad2) continue; // far tail: ignore
+			if (d2 < 1e-4f) d2 = 1e-4f;
+			float scale = -2.0f * (b.radius * b.radius) / (d2 * d2);
+			g += scale * (p - b.center);
+		}
 		return g;
 	}
 
