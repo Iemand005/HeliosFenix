@@ -451,6 +451,11 @@ public:
 			}
 		}
 
+		auto ph3 = std::chrono::high_resolution_clock::now();
+		std::cerr << "  mesh: cache=" << std::chrono::duration<double, std::milli>(ph1 - ph0).count()
+			<< "ms cubes=" << std::chrono::duration<double, std::milli>(ph2 - ph1).count()
+			<< "ms tris=" << std::chrono::duration<double, std::milli>(ph3 - ph2).count()
+			<< "ms verts=" << mesh.vertices.size() << " tris=" << mesh.indices.size() / 3 << std::endl;
 		return mesh;
 	}
 };
