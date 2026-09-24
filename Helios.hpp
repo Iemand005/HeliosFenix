@@ -3,6 +3,8 @@
 #define NOMINMAX
 
 #include <algorithm>
+#include <chrono>
+#include <iostream>
 #include <string>
 
 #include <glm/glm.hpp>
@@ -149,8 +151,14 @@ public:
 		while (!window->ShouldClose()) {
 			ProcessInput();
 			// Update(false);
+			auto t0 = std::chrono::high_resolution_clock::now();
 			AnimateMeatballs(static_cast<float>(scene->GetDeltaTime()));
+			auto t1 = std::chrono::high_resolution_clock::now();
 			Redraw();
+			auto t2 = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double, std::milli> animateMs = t1 - t0;
+			std::chrono::duration<double, std::milli> drawMs = t2 - t1;
+			std::cerr << "anim=" << animateMs.count() << "ms draw=" << drawMs.count() << "ms" << std::endl;
 		}
 
 		Destroy();
