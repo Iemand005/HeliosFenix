@@ -90,8 +90,6 @@ endif()
 set_property(TARGET Helios PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 if(MSVC)
-	target_compile_options(Helios PRIVATE $<$<CONFIG:Debug>:/Zi>)
-
 	target_link_options(Helios PRIVATE $<$<CONFIG:Debug>:/DEBUG>)
 
 	add_compile_options(/RTC1)
