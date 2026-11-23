@@ -98,7 +98,7 @@ public:
 
 	void ProcessInput() {
 		SDL_Event event;
-		fe::SDLWindow* window = GetWindow<fe::SDLWindow>();
+		fe::SDLWindow* window = getWindow<fe::SDLWindow>();
 		while (window->PollSDLEvent(&event)) {
 			ImGui_ImplSDL3_ProcessEvent(&event);
 			auto io = ImGui::GetIO();
@@ -142,11 +142,11 @@ public:
 	}
 
 	void Run() {
-		auto window = GetWindow<fe::SDLWindow>();
+		auto window = getWindow<fe::SDLWindow>();
 		window->Show();
 		camera->SetAspect(camera->aspect);
 
-		while (!window->ShouldClose()) {
+		while (!window->shouldClose()) {
 			ProcessInput();
 			// Update(false);
 			AnimateMeatballs(static_cast<float>(scene->GetDeltaTime()));
@@ -156,9 +156,9 @@ public:
 		Destroy();
 	}
 
-	void InitUI() override {}
+	void initUI() override {}
 
-	void DrawUI() override {
+	void drawUI() override {
 		if (!showDebugUI) return;
 		BeginFrame();
 		DrawDebugUI();
